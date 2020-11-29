@@ -5,6 +5,8 @@ use std::time::{Duration, SystemTime};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let _guard = sentry::init("https://0fe0d16e158146279a751bbf675f2610@o117736.ingest.sentry.io/5536978");
+
     let interval: Duration = Duration::from_secs(15);
     let now = SystemTime::now();
 
