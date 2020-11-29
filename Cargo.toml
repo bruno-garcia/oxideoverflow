@@ -1,0 +1,11 @@
+[package]
+name = "oxideoverflow"
+version = "0.1.0"
+authors = ["Bruno Garcia <bruno@brunogarcia.com>"]
+edition = "2018"
+
+[dependencies]
+reqwest = { version = "0.10.9", features = ["json", "gzip", "brotli"] }
+tokio = { version = "0.2", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+async-std = "1.7.0"
