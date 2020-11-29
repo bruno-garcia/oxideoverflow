@@ -7,11 +7,21 @@ use std::time::{Duration, SystemTime};
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _guard = sentry::init("https://0fe0d16e158146279a751bbf675f2610@o117736.ingest.sentry.io/5536978");
 
+    // TODO: Configurable
     let interval: Duration = Duration::from_secs(15);
-
     let tag = "sentry";
     let max_items = 3;
-    let key = env::var("OXIDEOVERFLOW_STACKOVERFLOW_KEY").unwrap();
+    let key: Option<String> = match env::var("OXIDEOVERFLOW_STACKOVERFLOW_KEY") {
+        Ok(v) => Some(v),
+        Err(_) => None
+    };
+
+    sentry::configure_scope(|scope| {
+        scope.set_tag("stackoverflow.tag", tag);
+        scope.set_tag("stackoverflow.max_items", max_items);
+        scope.set_tag("stackoverflow.has_key", !key.is_none());
+        scope.set_tag("interval", interval.as_secs());
+    });
 
     let mut offset: Option<Duration> = None;
     loop {
@@ -24,9 +34,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
         let to = now.checked_add(interval).unwrap().duration_since(SystemTime::UNIX_EPOCH)?;
         offset = Some(to);
-        let stackoverflow_url = get_url(&from, &to, tag, max_items, key.as_str());
+        let stackoverflow_url = get_url(&from, &to, tag, max_items, &key);
+
+        let task = task::sleep(interval);
+        
+        sentry::configure_scope(|scope| {
+            scope.set_extra("stackoverflow.from", from.as_secs().into());
+            scope.set_extra("stackoverflow.to", to.as_secs().into());
+        });
         println!("Waiting for {} seconds before polling.", interval.as_secs());
-        task::sleep(interval).await;
+
+        task.await;
 
         println!("Fetching from {}", stackoverflow_url);
 
@@ -59,8 +77,8 @@ fn handle_response(response: Response) {
     println!("Done processing response.");
 }
 
-fn get_url(from: &Duration, to: &Duration, tag: &str, max_items: u8, key: &str) -> String {
-    format!("https://api.stackexchange.com/2.2/questions?\
+fn get_url(from: &Duration, to: &Duration, tag: &str, max_items: u8, key: &Option<String>) -> String {
+    let url = format!("https://api.stackexchange.com/2.2/questions?\
         page=1&\
         order=asc&\
         sort=creation&\
@@ -68,13 +86,16 @@ fn get_url(from: &Duration, to: &Duration, tag: &str, max_items: u8, key: &str) 
         pagesize={}&\
         fromdate={}&\
         todate={}&\
-        tagged={}&\
-        key={}",
+        tagged={}",
         max_items,
         from.as_secs(),
         to.as_secs(),
-        tag,
-        key)
+        tag);
+    if let Some(k) = key {
+        format!("{}&key={}", url, k)
+    } else {
+        url
+    }
 }
 
 #[derive(Deserialize, Debug)]
