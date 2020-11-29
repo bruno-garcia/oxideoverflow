@@ -2,12 +2,14 @@ use serde::Deserialize;
 use async_std::task;
 use std::env;
 use std::time::{Duration, SystemTime};
+use webhook::Webhook;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _guard = sentry::init(("https://0fe0d16e158146279a751bbf675f2610@o117736.ingest.sentry.io/5536978", sentry::ClientOptions {
         debug: true,
         attach_stacktrace: true,
+        in_app_include: vec!["oxideoverflow"],
         ..Default::default()
     }));
 
@@ -20,6 +22,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(_) => None
     };
     let discord_url = env::var("OXIDEOVERFLOW_DISCORD_URL").unwrap();
+    let webhook = Webhook::from_url(discord_url.as_str());
 
     sentry::configure_scope(|scope| {
         scope.set_tag("stackoverflow.tag", tag);
@@ -30,7 +33,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let mut offset: Option<Duration> = None;
-    let mut iterations = 0;
+    let mut iterations: i32 = 0;
+    let stackoverflow_client = reqwest::Client::new();
+
     loop {
         let now = SystemTime::now();
         let from = match offset {
@@ -38,6 +43,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Some(b) => b,
             // From now
             None => now.duration_since(SystemTime::UNIX_EPOCH)?
+            // None => now.checked_sub(Duration::from_secs(10000000)).unwrap().duration_since(SystemTime::UNIX_EPOCH)?
         };
         let to = now.checked_add(interval).unwrap().duration_since(SystemTime::UNIX_EPOCH)?;
         offset = Some(to);
@@ -56,16 +62,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         println!("Fetching from {}", stackoverflow_url);
 
-        match reqwest::get(&stackoverflow_url).await {
+        match stackoverflow_client.get(&stackoverflow_url).send().await {
             Ok(response) => {
                 let status = response.status();
-                println!("Status: {}", status);
+                println!("Stack Overflow Status: {}", status);
                 if status == 200 {
                     match response.json().await {
                         Ok(r) => {
-                            let response: Response = r;
+                            let response: stackoverflow::Response = r;
                             println!("Response: {:#?}", response);
-                            handle_response(response, discord_url.as_str());
+                            handle_response(&webhook, response).await?;
                         },
                         Err(e) => {
                             println!("Response error {}", e);
@@ -92,7 +98,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-fn handle_response(response: Response, discord_url: &str) {
+async fn handle_response(
+    webhook: &Webhook,
+    response: stackoverflow::Response) -> Result<(), Box<dyn std::error::Error>> {
     for item in response.items.iter() {
         println!("item: {:#?}", item);
 
@@ -102,8 +110,27 @@ fn handle_response(response: Response, discord_url: &str) {
             ..Default::default()
         });
 
+        let response = webhook.send(|message| { message
+            .content("New Question From Stack Overflow.")
+            .embed(|embed| embed
+                .title(item.title.as_str())
+                .field("link", item.link.as_str(), true)
+                .image(item.owner.profile_image.as_str(), None, None, None)
+                .author(item.owner.display_name.as_str(), 
+                    item.owner.link.as_str(),
+                    Some(item.owner.profile_image.clone()),
+                    None)
+            )}).await;
+
+        if let Err(e) = response {
+            sentry::capture_message(
+                format!("Call to Discord failed with status {} and no body.", e).as_str(), 
+                sentry::Level::Error);
+        } else {
+            println!("Successfully called Discord webhook.");
+        }
     }
-    println!("Done processing response.");
+    Ok(())
 }
 
 fn get_url(from: &Duration, to: &Duration, tag: &str, max_items: u8, key: &Option<String>) -> String {
@@ -120,6 +147,14 @@ fn get_url(from: &Duration, to: &Duration, tag: &str, max_items: u8, key: &Optio
         from.as_secs(),
         to.as_secs(),
         tag);
+
+    sentry::add_breadcrumb(sentry::Breadcrumb {
+        category: Some("stackoverflow".into()),
+        ty: "url".into(),
+        message: Some(url.clone()),
+        ..Default::default()
+    });
+
     if let Some(k) = key {
         format!("{}&key={}", url, k)
     } else {
@@ -127,28 +162,38 @@ fn get_url(from: &Duration, to: &Duration, tag: &str, max_items: u8, key: &Optio
     }
 }
 
-#[derive(Deserialize, Debug)]
-struct Response {
-    has_more: bool,
-    quota_max: u32,
-    quota_remaining: u32,
-    items: Vec<Question>,
-}
+mod stackoverflow {
+    use super::*;
 
-#[derive(Deserialize, Debug)]
-struct Question {
-    title: String,
-    owner: Owner,
-    tags: Vec<String>,
-}
-
-#[derive(Deserialize, Debug)]
-struct Owner {
-    reputation: u64,
-    user_id: u64,
-    user_type: String,
-    accept_rate: Option<u32>,
-    profile_image: String,
-    display_name: String,
-    link: String,
+    #[derive(Deserialize, Debug)]
+    pub struct Response {
+        pub has_more: bool,
+        pub quota_max: u32,
+        pub quota_remaining: u32,
+        pub items: Vec<Question>,
+    }
+    
+    #[derive(Deserialize, Debug)]
+    pub struct Question {
+        pub title: String,
+        pub link: String,
+        pub score: i32,
+        pub question_id: u64,
+        pub creation_date: u64,
+        pub owner: Owner,
+        pub tags: Vec<String>,
+        pub is_answered: bool,
+        pub view_count: u64,
+    }
+    
+    #[derive(Deserialize, Debug)]
+    pub struct Owner {
+        pub reputation: u64,
+        pub user_id: u64,
+        pub user_type: String,
+        pub accept_rate: Option<u32>,
+        pub profile_image: String,
+        pub display_name: String,
+        pub link: String,
+    }
 }

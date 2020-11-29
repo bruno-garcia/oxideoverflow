@@ -989,6 +989,7 @@ dependencies = [
  "sentry",
  "serde",
  "tokio",
+ "webhook",
 ]
 
 [[package]]
@@ -1859,6 +1860,18 @@ checksum = "4bf6ef87ad7ae8008e15a355ce696bed26012b7caa21605188cfd8214ab51e2d"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "webhook"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7bd1d2433655b97e1b5d02ab1e0fb582788be0e29828616ce98ba896ad31c64b"
+dependencies = [
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]
