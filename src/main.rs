@@ -5,14 +5,42 @@ use std::time::{Duration, SystemTime};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let interval: Duration = Duration::from_secs(15);
     let now = SystemTime::now();
-    let from = now.duration_since(SystemTime::UNIX_EPOCH)?.as_secs();
-    let to = now.checked_add(Duration::from_secs(15)).unwrap().duration_since(SystemTime::UNIX_EPOCH)?.as_secs();
 
     let query = "[sentry]";
     let key = env::var("OXIDEOVERFLOW_STACKOVERFLOW_KEY").unwrap();
 
-    let path = format!("https://api.stackexchange.com/2.2/questions?\
+    loop {
+        let from = now.duration_since(SystemTime::UNIX_EPOCH)?;
+        let to = now.checked_add(interval).unwrap().duration_since(SystemTime::UNIX_EPOCH)?;
+        let stackoverflow_url = get_url(from, to, query, key.as_str());
+        task::sleep(interval).await;
+
+        println!("Fetching from {}", stackoverflow_url);
+
+        match reqwest::get(&stackoverflow_url).await {
+            Ok(response) => {
+                println!("Status: {}", response.status());
+                if response.status() == 200 {
+                    match response.json().await {
+                        Ok(r) => {
+                            let json: Response = r;
+                            println!("json: {:#?}", json);
+                        },
+                        Err(e) => println!("err {}", e),
+                    };
+                } else {
+                    println!("Payload: {:#?}", response.text().await?);
+                }
+            }
+            Err(e) => println!("Failed with error: {}, on stackoverflow_url: {}", e, stackoverflow_url),
+        }
+    }
+}
+
+fn get_url(from: Duration, to: Duration, query: &str, key: &str) -> String {
+    format!("https://api.stackexchange.com/2.2/questions?\
         page=1&\
         pagesize=2&\
         order=asc&\
@@ -23,32 +51,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         todate={}&\
         q={}&\
         key={}",
-        from,
-        to,
+        from.as_secs(),
+        to.as_secs(),
         query,
-        key);
-
-    println!("{}", path);
-    match reqwest::get(&path).await {
-        Ok(response) => {
-            println!("Status: {}", response.status());
-            if response.status() == 200 {
-                match response.json().await {
-                    Ok(r) => {
-                        let json: Response = r;
-                        println!("json: {:#?}", json);
-                    },
-                    Err(e) => println!("err {}", e),
-                };
-            } else {
-                println!("Payload: {:#?}", response.text().await?);
-            }
-        }
-        Err(e) => println!("Failed with error: {}, on url: {}", e, path),
-    }
-    // To make the worker
-    task::sleep(Duration::from_secs(10)).await;
-    Ok(())
+        key)
 }
 
 #[derive(Deserialize, Debug)]
