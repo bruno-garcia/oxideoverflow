@@ -14,9 +14,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }));
 
     // TODO: Configurable
-    let interval: Duration = Duration::from_secs(15);
+    let interval: Duration = Duration::from_secs(240);
     let tag = "sentry";
-    let max_items = 3;
+    let max_items = 2;
     let key: Option<String> = match env::var("OXIDEOVERFLOW_STACKOVERFLOW_KEY") {
         Ok(v) => Some(v),
         Err(_) => None
@@ -43,7 +43,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Some(b) => b,
             // From now
             None => now.duration_since(SystemTime::UNIX_EPOCH)?
-            // None => now.checked_sub(Duration::from_secs(10000000)).unwrap().duration_since(SystemTime::UNIX_EPOCH)?
+            // None => now.checked_sub(Duration::from_secs(10000)).unwrap().duration_since(SystemTime::UNIX_EPOCH)?
         };
         let to = now.checked_add(interval).unwrap().duration_since(SystemTime::UNIX_EPOCH)?;
         offset = Some(to);
@@ -112,14 +112,22 @@ async fn handle_response(
 
         let response = webhook.send(|message| { message
             .content("New Question From Stack Overflow.")
-            .embed(|embed| embed
+            .embed(|embed| {
+                embed
                 .title(item.title.as_str())
-                .field("link", item.link.as_str(), true)
-                .image(item.owner.profile_image.as_str(), None, None, None)
+                .field(item.link.as_str(), format!("tags: {}", item.tags.join(", ")).as_str(),true)
                 .author(item.owner.display_name.as_str(), 
                     item.owner.link.as_str(),
                     Some(item.owner.profile_image.clone()),
-                    None)
+                    None);
+                if item.is_answered {
+                    embed.color(16711680);
+                } else {
+                    embed.color(32768);
+                }
+
+                embed
+            }
             )}).await;
 
         if let Err(e) = response {
