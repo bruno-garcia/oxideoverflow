@@ -375,6 +375,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "findshlibs"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a00acd5e75443244c1f42fb330b8493d30b44da5b61565d8b8fbf4ecc9dda2a1"
+dependencies = [
+ "lazy_static",
+ "libc",
+]
+
+[[package]]
 name = "flate2"
 version = "1.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1312,6 +1322,7 @@ dependencies = [
  "sentry-backtrace",
  "sentry-contexts",
  "sentry-core",
+ "sentry-debug-images",
  "sentry-panic",
 ]
 
@@ -1354,6 +1365,17 @@ dependencies = [
  "sentry-types",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "sentry-debug-images"
+version = "0.21.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "632e47b19ff9712bd22424ccf57a21a0e5f3bf4a2e12baae447e01d81e8e2f22"
+dependencies = [
+ "findshlibs",
+ "lazy_static",
+ "sentry-core",
 ]
 
 [[package]]
