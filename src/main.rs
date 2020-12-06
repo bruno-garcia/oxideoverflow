@@ -6,26 +6,26 @@ use webhook::Webhook;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let _guard = sentry::init(("https://0fe0d16e158146279a751bbf675f2610@o117736.ingest.sentry.io/5536978", sentry::ClientOptions {
+    // Only initializes if `SENTRY_DSN` env var is set with a valid DSN.
+    let _guard = sentry::init(sentry::ClientOptions {
         debug: true,
         attach_stacktrace: true,
         in_app_include: vec!["oxideoverflow"],
         ..Default::default()
-    }));
+    });
 
-    // TODO: Configurable
     let interval: Duration = Duration::from_secs(240);
-    let tag = "sentry";
     let max_items = 2;
     let key: Option<String> = match env::var("OXIDEOVERFLOW_STACKOVERFLOW_KEY") {
         Ok(v) => Some(v),
         Err(_) => None
     };
     let discord_url = env::var("OXIDEOVERFLOW_DISCORD_URL").unwrap();
+    let tag = env::var("OXIDEOVERFLOW_TAG").unwrap();
     let webhook = Webhook::from_url(discord_url.as_str());
 
     sentry::configure_scope(|scope| {
-        scope.set_tag("stackoverflow.tag", tag);
+        scope.set_tag("stackoverflow.tag", tag.as_str());
         scope.set_tag("stackoverflow.max_items", max_items);
         scope.set_tag("stackoverflow.has_key", !key.is_none());
         scope.set_tag("interval", interval.as_secs());
@@ -47,7 +47,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         };
         let to = now.checked_add(interval).unwrap().duration_since(SystemTime::UNIX_EPOCH)?;
         offset = Some(to);
-        let stackoverflow_url = get_url(&from, &to, tag, max_items, &key);
+        let stackoverflow_url = get_url(&from, &to, &tag, max_items, &key);
 
         iterations = iterations + 1;
         
@@ -141,7 +141,7 @@ async fn handle_response(
     Ok(())
 }
 
-fn get_url(from: &Duration, to: &Duration, tag: &str, max_items: u8, key: &Option<String>) -> String {
+fn get_url(from: &Duration, to: &Duration, tag: &String, max_items: u8, key: &Option<String>) -> String {
     let url = format!("https://api.stackexchange.com/2.2/questions?\
         page=1&\
         order=asc&\
