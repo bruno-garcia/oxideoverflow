@@ -11,6 +11,16 @@ A worker that takes new posts from StackOverflow, of a certain tag, and writes i
 
 https://hub.docker.com/r/brunogarcia/oxideoverflow/tags
 
+For **example**:
+
+```sh
+docker run --rm \
+    --env SENTRY_DSN=https://0fe0d16e158146279a751bbf675f2610@o117736.ingest.sentry.io/5536978 \
+    --env OXIDEOVERFLOW_TAG=sentry \
+    --env OXIDEOVERFLOW_DISCORD_URL=https://discord.com/api/webhooks/your-personal-url \
+    brunogarcia/oxideoverflow:edge
+```
+
 ### Sentry
 
 This project uses [Sentry](https://sentry.io) to track errors and crashes. When a docker image is built, in the build phase of the [Dockerfile](Dockerfile)
@@ -46,9 +56,9 @@ Alternatively you can provide more information:
 
 ```sh
 docker run --rm --env SENTRY_ENVIRONMENT=test \
-    --env SENTRY_RELEASE=1.0 \
     --env SENTRY_DSN=https://0fe0d16e158146279a751bbf675f2610@o117736.ingest.sentry.io/5536978 \
     --env OXIDEOVERFLOW_TAG=sentry \
+    --env OXIDEOVERFLOW_DISCORD_URL=https://discord.com/api/webhooks/your-personal-url \
     --env OXIDEOVERFLOW_STACKOVERFLOW_KEY='my-token' \
     oxideoverflow
 ```
@@ -67,5 +77,6 @@ docker run --rm --env SENTRY_ENVIRONMENT=test \
 
 #### Sentry Release and Environment
 
-`SENTRY_ENVIRONMENT` - The environment. If nothing is passed, it's assume _prodution_.  
-`SENTRY_RELEASE` - The release name. For example 1.0 or a git SHA.
+`SENTRY_ENVIRONMENT` - The environment. If nothing is passed, it's _prodution_.  
+`SENTRY_RELEASE` - The release name. For example 1.0 or a git SHA.  
+`SENTRY_DSN` - The DSN of the Sentry project to send errors.
