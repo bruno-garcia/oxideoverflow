@@ -22,6 +22,12 @@ jobs:
         with:
           command: build
           args: --release --all-features
+      - name: Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ github.sha }}
+          path: |
+            ${{ github.workspace }}/target/release/oxideoverflow
   docker:
     name: Push docker image
     needs: build
@@ -72,6 +78,9 @@ jobs:
           context: .
           file: ./Dockerfile
           build-args: |
+            SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
+            SENTRY_ORG=${{ secrets.SENTRY_ORG }}
+            SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
             ENVIRONMENT=${{ steps.prep.outputs.environment }}
             VERSION=${{ steps.prep.outputs.version }}
           platforms: linux/amd64,linux/386

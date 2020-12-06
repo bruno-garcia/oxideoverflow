@@ -1,8 +1,15 @@
 # oxide overflow
 
+[![build](https://github.com/bruno-garcia/oxideoverflow/workflows/build/badge.svg?branch=main)](https://github.com/bruno-garcia/oxideoverflow/actions?query=branch%3Amain) 
+
+
 A worker that takes new posts from StackOverflow, of a certain tag, and writes it to a Discord channel.
 
 ![StackOverflow messages no discord](.github/stackoverflow_discord.png)
+
+## On Docker Hub
+
+https://hub.docker.com/r/brunogarcia/oxideoverflow/tags
 
 ### Sentry
 
