@@ -3,7 +3,8 @@
 [![build](https://github.com/bruno-garcia/oxideoverflow/workflows/build/badge.svg?branch=main)](https://github.com/bruno-garcia/oxideoverflow/actions?query=branch%3Amain) 
 
 
-A worker that takes new posts from StackOverflow, of a certain tag, and writes it to a Discord channel.
+A worker that takes new posts from StackOverflow, of a certain tag, and writes it to a Discord channel.  
+You can see it in action on [Sentry's](http://sentry.io/) Discord: [![Sentry's Discord](https://img.shields.io/discord/621778831602221064.svg)](https://discord.gg/PXa5Apfe7K)  
 
 ![StackOverflow messages no discord](.github/stackoverflow_discord.png)
 
