@@ -81,8 +81,8 @@ jobs:
             SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
             SENTRY_ORG=${{ secrets.SENTRY_ORG }}
             SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
-            ENVIRONMENT=${{ steps.prep.outputs.environment }}
-            VERSION=${{ steps.prep.outputs.version }}
+            SENTRY_ENVIRONMENT=${{ steps.prep.outputs.environment }}
+            SENTRY_RELEASE=${{ steps.prep.outputs.version }}
           platforms: linux/amd64,linux/386
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.prep.outputs.tags }}

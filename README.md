@@ -20,6 +20,7 @@ the debug files are uploaded to Sentry in order to get the proper line numbers o
 
 ```sh
 docker build -t oxideoverflow \
+    --build-arg SENTRY_RELEASE=1.0 \
     --build-arg SENTRY_AUTH_TOKEN=your-sentry-auth-token \
     --build-arg SENTRY_ORG=your-sentry-project \
     --build-arg SENTRY_PROJECT=oxideoverflow \
@@ -67,4 +68,4 @@ docker run --rm --env SENTRY_ENVIRONMENT=test \
 #### Sentry Release and Environment
 
 `SENTRY_ENVIRONMENT` - The environment. If nothing is passed, it's assume _prodution_.  
-`SENTRY_VERSION` - The version. If nothing is passed, it's assume _prodution_.
+`SENTRY_RELEASE` - The release name. For example 1.0 or a git SHA.
